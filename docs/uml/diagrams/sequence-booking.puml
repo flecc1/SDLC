@@ -1,0 +1,69 @@
+@startuml sequence-booking
+' Диаграмма последовательности: запись на групповое занятие (UC-05, UC-07)
+' SDD: представление 005-booking-flow; REQ-FUNC-007-009, REQ-PERF-002, REQ-REL-001; ADR-0004
+
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam dpi 150
+skinparam monochrome true
+skinparam sequenceMessageAlign center
+skinparam ParticipantBackgroundColor white
+autonumber
+
+title sd Записаться на занятие
+
+actor "Посетитель" as V
+boundary "SPA\n(браузер)" as SPA
+control "BookingController\n<<REST>>" as C
+control "BookingService" as S
+entity "BookingPolicy" as P
+database "PostgreSQL" as DB
+queue "AuditLog" as LOG
+
+ref over V, SPA, C : sd Войти в систему (UC-02)
+
+V -> SPA : нажать «Записаться»
+activate SPA
+SPA -> C : POST /api/trainings/{id}/bookings
+activate C
+note right of SPA : {≤ 2 с при 50 параллельных\nзапросах, REQ-PERF-002}
+C -> S : book(visitorId, trainingId)
+activate S
+S -> DB : SELECT … FROM training\nWHERE id = ? FOR UPDATE
+activate DB
+DB --> S : training (строка заблокирована)
+S -> DB : SELECT пересекающиеся записи посетителя
+DB --> S : conflicts
+S -> P : check(training, conflicts, now)
+activate P
+P --> S : Decision
+deactivate P
+
+alt Decision = OK
+  create entity "booking :Booking" as B
+  S -> B : <<create>> (CONFIRMED)
+  S -> DB : INSERT booking;\nUPDATE training SET free_places = free_places − 1
+  S -> DB : COMMIT
+  DB --> S : ok
+  S ->> LOG : booking.created (async)
+  S --> C : BookingDto
+  C --> SPA : 201 Created {status, freePlaces}
+  SPA --> V : «Запись подтверждена»
+else Decision = NO_PLACES
+  S -> DB : ROLLBACK
+  S --> C : NoPlacesException
+  C --> SPA : 409 {reason: "мест нет", waitlist: true}
+  SPA --> V : предложить лист ожидания
+  ref over V, SPA, C, S : sd Встать в лист ожидания (UC-06)
+else Decision = CONFLICT
+  S -> DB : ROLLBACK
+  S --> C : ConflictException(booking)
+  C --> SPA : 409 {conflict}
+  SPA --> V : показать конфликтующую запись
+end
+deactivate DB
+deactivate S
+deactivate C
+deactivate SPA
+@enduml

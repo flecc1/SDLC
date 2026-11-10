@@ -1,0 +1,33 @@
+# FitSchedule — сквозной проект курса ЖЦРПО
+
+Web-приложение для управления расписанием фитнес-клуба и записи на групповые и персональные тренировки
+(Java 21, Spring Boot 3, React, PostgreSQL 16).
+
+Автор: Лесковский Е. Е., гр. 450501, БГУИР, кафедра ЭВМ.
+
+## Документация
+
+| Документ | Файл | Лабораторная работа |
+|----------|------|---------------------|
+| Спецификация требований (SRS) 0.2 | [docs/srs/srs.md](docs/srs/srs.md) | ЛР3, обновлён в ЛР4 |
+| Описание дизайна (SDD) 0.3 | [docs/sdd/sdd.md](docs/sdd/sdd.md) | ЛР4, обновлён в ЛР5 |
+| Архитектурные решения (ADR) | [docs/adr](docs/adr) | ЛР4, ADR-0007 — ЛР5 |
+| План итераций и оценки | [docs/plan/iteration-plan.md](docs/plan/iteration-plan.md) | ЛР4 |
+| Переписка с Заказчиком | [docs/plan/correspondence.md](docs/plan/correspondence.md) | ЛР4 |
+| Глоссарий проекта | [docs/uml/glossary.md](docs/uml/glossary.md) | ЛР5 |
+| Дополнительные спецификации | [docs/uml/supplementary-spec.md](docs/uml/supplementary-spec.md) | ЛР5 |
+| Модель вариантов использования | [docs/uml/use-cases.md](docs/uml/use-cases.md) | ЛР5 |
+| Диаграммы UML (PlantUML и PNG) | [docs/uml/diagrams](docs/uml/diagrams), [docs/uml/img](docs/uml/img) | ЛР5 |
+
+Шаблоны документов — в ветке `ProjectTemplate`.
+
+## Ветки
+
+- `main` — согласованные версии документов;
+- `lab1` — лабораторная работа № 1;
+- `docs/lab3` — бизнес-требования (SRS);
+- `docs/lab4` — системные требования (SDD, ADR, план);
+- `docs/lab5` — модель динамического поведения на UML (прецеденты, активность, состояния, последовательность).
+
+Диаграммы UML пересобираются командой `java -jar plantuml.jar -tpng -o ../img docs/uml/diagrams/*.puml`
+(или расширением PlantUML для VS Code).
