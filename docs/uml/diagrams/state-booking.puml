@@ -1,0 +1,37 @@
+@startuml state-booking
+' Диаграмма состояний: запись на групповое занятие (Booking)
+' SDD: представление 007-booking-states; REQ-FUNC-006, 007, 011, 013, 023; ADR-0006
+
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam dpi 150
+skinparam monochrome true
+skinparam StateBackgroundColor white
+
+title state machine Запись (Booking)
+
+[*] --> CONFIRMED : book() [места есть,\nнет пересечений]
+[*] --> CONFIRMED : promoteFirst() [из листа\nожидания]
+
+state CONFIRMED : entry / free_places − 1
+state CONFIRMED {
+  [*] --> FreeCancel
+  state "Свободная отмена" as FreeCancel
+  state "Поздняя отмена" as LateCancel
+  FreeCancel --> LateCancel : when(now ≥ startsAt − cancelDeadline)
+}
+
+state CANCELLED : entry / free_places + 1;\npromoteFirst()
+state CANCELLED_BY_CLUB : entry / notify(участник)
+state ATTENDED
+
+FreeCancel --> CANCELLED : cancel() посетителем
+CONFIRMED --> CANCELLED : cancel() администратором
+CONFIRMED --> CANCELLED_BY_CLUB : отмена занятия клубом
+LateCancel --> ATTENDED : when(now ≥ endsAt)
+
+CANCELLED --> [*]
+CANCELLED_BY_CLUB --> [*]
+ATTENDED --> [*]
+@enduml

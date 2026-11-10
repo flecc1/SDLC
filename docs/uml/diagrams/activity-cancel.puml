@@ -1,0 +1,50 @@
+@startuml activity-cancel
+' Диаграмма активности: отмена записи с продвижением листа ожидания (UC-08, UC-09, UC-18, UC-19)
+' SDD: представление 013-activity; REQ-FUNC-011, 013, 023; ADR-0006
+
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam dpi 150
+skinparam monochrome true
+skinparam ActivityBackgroundColor white
+
+title Отмена записи и продвижение листа ожидания
+
+|Посетитель|
+start
+:Открыть «Мои записи»\nи нажать «Отменить»;
+|Сервер FitSchedule|
+:Заблокировать строку занятия\nSELECT … FOR UPDATE;
+if (Срок свободной отмены истёк?) then (да)
+  :Отклонить: 409;
+  |Посетитель|
+  :Обратиться к администратору;
+  |Администратор|
+  :Отменить запись посетителя\n(UC-18);
+  |Сервер FitSchedule|
+else (нет)
+endif
+:Статус записи → CANCELLED;
+:free_places + 1;
+if (До начала больше 30 минут?) then (нет)
+  :Место остаётся свободным;
+else (да)
+  while (Есть элемент очереди WAITING?) is (да)
+    :Взять первый по позиции;
+    if (У посетителя есть пересечение?) then (да)
+      :Элемент → EXPIRED;
+    else (нет)
+      :Создать запись CONFIRMED\n(viaWaitlist = true);
+      :free_places − 1;
+      :Элемент → PROMOTED;
+      :Создать уведомление\nWAITLIST_PROMOTED;
+      break
+    endif
+  endwhile (нет)
+endif
+:Зафиксировать транзакцию;
+|Посетитель|
+:Увидеть статус «Отменена»;
+stop
+@enduml

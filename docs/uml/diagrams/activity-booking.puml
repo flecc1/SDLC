@@ -1,0 +1,87 @@
+@startuml activity-booking
+' Диаграмма активности: запись на групповое занятие (UC-03, UC-04, UC-05, UC-06, UC-07)
+' SDD: представление 013-activity; REQ-FUNC-004, 007-009, 023; ADR-0004
+
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam dpi 150
+skinparam monochrome true
+skinparam ActivityBackgroundColor white
+
+title Запись на групповое занятие
+
+|Посетитель|
+start
+:Открыть страницу «Расписание»;
+|Web-клиент (SPA)|
+:Запросить занятия за неделю\nGET /api/trainings;
+|Сервер FitSchedule|
+:Выбрать занятия периода\nи число свободных мест;
+|Web-клиент (SPA)|
+:Показать карточки занятий;
+|Посетитель|
+if (Нужен фильтр?) then (да)
+  :Задать дату, вид занятия, тренера;
+  |Web-клиент (SPA)|
+  :Обновить список по фильтру;
+else (нет)
+endif
+|Посетитель|
+:Выбрать занятие и нажать «Записаться»;
+|Web-клиент (SPA)|
+:Показать подтверждение\n(время, зал, тренер, срок отмены);
+|Посетитель|
+if (Подтверждает?) then (нет)
+  stop
+else (да)
+endif
+|Web-клиент (SPA)|
+:POST /api/trainings/{id}/bookings;
+|Сервер FitSchedule|
+:Заблокировать строку занятия\nSELECT … FOR UPDATE;
+if (Занятие отменено или уже началось?) then (да)
+  :Отклонить: 409 «занятие недоступно»;
+  |Web-клиент (SPA)|
+  :Показать причину отказа;
+  stop
+else (нет)
+endif
+|Сервер FitSchedule|
+if (Есть свободные места?) then (нет)
+  :Ответ 409 «мест нет»\nс предложением листа ожидания;
+  |Посетитель|
+  if (Встать в лист ожидания?) then (да)
+    |Web-клиент (SPA)|
+    :POST /api/trainings/{id}/waitlist;
+    |Сервер FitSchedule|
+    :Добавить в конец очереди\n(статус WAITING);
+    |Web-клиент (SPA)|
+    :Показать позицию в очереди;
+  else (нет)
+  endif
+  stop
+else (да)
+endif
+|Сервер FitSchedule|
+if (Есть пересечение с другой записью?) then (да)
+  :Отклонить: 409 с конфликтующей записью;
+  |Web-клиент (SPA)|
+  :Показать конфликтующую запись;
+  stop
+else (нет)
+endif
+|Сервер FitSchedule|
+:Создать запись CONFIRMED;
+:Уменьшить free_places на 1;
+:Зафиксировать транзакцию;
+fork
+  :Записать событие в журнал\n(REQ-OBS-001);
+fork again
+  |Web-клиент (SPA)|
+  :Показать «Запись подтверждена»\nи новое число мест;
+end fork
+|Посетитель|
+:Получить подтверждение\n(при желании скачать .ics);
+stop
+@enduml
